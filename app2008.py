@@ -2,12 +2,22 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
+import os
 
-st.set_page_config(page_title="AI Health & Diet Recommender", layout="wide")
+st.set_page_config(
+    page_title="AI Health & Diet Recommender",
+    layout="wide",
+    page_icon="💪"
+)
 
 # ---------------- Load pre-trained models ----------------
-with open("sample_models.pkl", "rb") as f:
-    models = pickle.load(f)
+pkl_path = os.path.join(os.getcwd(), "sample_models.pkl")
+try:
+    with open(pkl_path, "rb") as f:
+        models = pickle.load(f)
+except FileNotFoundError:
+    st.error("❌ sample_models.pkl not found! Please upload it in the same folder as app.py")
+    st.stop()
 
 reg_calories = models['reg_calories']
 reg_protein = models['reg_protein']
@@ -18,8 +28,8 @@ clf_strength = models['clf_strength']
 clf_mobility = models['clf_mobility']
 X_cols = models['X_cols']
 
-# ---------------- Sidebar: User inputs ----------------
-st.sidebar.header("Enter your details")
+# ---------------- Sidebar: User Inputs ----------------
+st.sidebar.header("📝 Enter your details")
 weight = st.sidebar.number_input("Weight (kg)", 40.0, 150.0, 70.0)
 height = st.sidebar.number_input("Height (cm)", 140.0, 210.0, 170.0)
 age = st.sidebar.number_input("Age", 18, 60, 25)
@@ -27,7 +37,7 @@ gender = st.sidebar.selectbox("Gender", ["male","female"])
 exercise_level = st.sidebar.selectbox("Exercise level", ["sedentary","light","moderate","active","very active"])
 water_cups = st.sidebar.number_input("Water cups/day", 0, 15, 6)
 
-# ---------------- Prepare input dataframe ----------------
+# ---------------- Prepare Input ----------------
 input_dict = {
     'weight': weight,
     'height': height,
@@ -58,37 +68,62 @@ cardio = clf_cardio.predict(input_df)[0]
 strength = clf_strength.predict(input_df)[0]
 mobility = clf_mobility.predict(input_df)[0]
 
-# ---------------- Display Results ----------------
+# ---------------- Display Header ----------------
 st.title("💪 AI Health & Diet Recommender")
-st.markdown("Personalized diet and exercise recommendations based on your body data.")
+st.markdown(
+    "Get personalized diet and exercise recommendations based on your body data. "
+    "This app is aligned with **SDG 3 — Good Health & Wellbeing**."
+)
 
+# ---------------- Nutrition Cards ----------------
 st.subheader("🥗 Daily Nutrition Targets")
-st.write(f"**Calories:** {round(calories)} kcal")
-st.write(f"**Protein:** {round(protein)} g | **Fat:** {round(fat)} g | **Carbs:** {round(carb)} g")
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Calories (kcal)", round(calories))
+col2.metric("Protein (g)", round(protein))
+col3.metric("Fat (g)", round(fat))
+col4.metric("Carbs (g)", round(carb))
 
+# ---------------- Exercise Cards ----------------
 st.subheader("🏋️ Personalized Exercise Plan")
-st.write(f"**Cardio:** {cardio}")
-st.write(f"**Strength training:** {strength}")
-st.write(f"**Mobility & Stretching:** {mobility}")
+col1, col2, col3 = st.columns(3)
+col1.info(f"💓 Cardio:\n{cardio}")
+col2.success(f"🏋️ Strength:\n{strength}")
+col3.warning(f"🧘 Mobility:\n{mobility}")
 
+# ---------------- Hydration ----------------
 st.subheader("💧 Hydration Recommendation")
-recommended_water_ml = weight * 30  # ~30 ml per kg
+recommended_water_ml = weight * 30
 recommended_cups = round(recommended_water_ml / 250)
 st.write(f"You reported: {water_cups} cups (~{water_cups*250} ml)")
 st.write(f"Recommended: ~{recommended_cups} cups (~{recommended_water_ml:.0f} ml) per day")
+if water_cups < recommended_cups:
+    st.warning("Try drinking more water to meet daily needs 💧")
+else:
+    st.success("Your water intake meets or exceeds the recommendation ✅")
 
-# ---------------- Optional: BMI visualization ----------------
+# ---------------- BMI Section ----------------
 bmi = weight / ((height/100)**2)
-st.subheader("📊 BMI")
-st.write(f"Your BMI: {bmi:.1f}")
-fig, ax = plt.subplots(figsize=(6,1.2))
-ax.set_xlim(10,40)
-ax.set_ylim(0,1)
-ax.axis('off')
-ranges = [(10,18.5,'Under'), (18.5,25,'Normal'), (25,30,'Over'), (30,40,'Obese')]
-colors = ['#ffd1dc','#c8f7c5','#fff2b2','#ffb3b3']
-for (start,end,_),c in zip(ranges,colors):
-    ax.fill_betweenx([0,1],[start],[end], color=c)
-ax.plot([bmi,bmi],[0,1], color='black')
+st.subheader("📊 BMI & Category")
+st.metric("Your BMI", f"{bmi:.1f}")
 
-st.pyplot(fig)
+# BMI category with colors
+if bmi < 18.5:
+    st.info("Category: Underweight")
+elif bmi < 25:
+    st.success("Category: Normal weight")
+elif bmi < 30:
+    st.warning("Category: Overweight")
+else:
+    st.error("Category: Obesity")
+
+# ---------------- Progress bars for BMI visualization ----------------
+st.subheader("BMI Progress Bar")
+bmi_percentage = min(max((bmi-10)/30, 0), 1)
+st.progress(bmi_percentage)
+
+# ---------------- Footer ----------------
+st.markdown("---")
+st.caption(
+    "This app uses AI to provide personalized recommendations. "
+    "It is aligned with Sustainable Development Goal 3 — Good Health & Wellbeing."
+)
