@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
-import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="AI Health & Diet Recommender", layout="wide")
 
@@ -91,4 +90,5 @@ colors = ['#ffd1dc','#c8f7c5','#fff2b2','#ffb3b3']
 for (start,end,_),c in zip(ranges,colors):
     ax.fill_betweenx([0,1],[start],[end], color=c)
 ax.plot([bmi,bmi],[0,1], color='black')
+
 st.pyplot(fig)
